@@ -1,0 +1,450 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <stdarg.h>
+#include <GL/glut.h>
+#include "matrix.h"
+#include "vec2.h"
+
+#define WINDOW_WIDTH  800
+#define WINDOW_HEIGHT 600
+#define VALUE 57.2957795
+#define  TIMER_PERIOD  20 
+#define  TIMER_ON      1 
+
+#define D2R 0.0174532
+double spd=1; //triangle's speed
+bool up = false, down = false, right = false, left = false ,dTriangle=false;
+float A = 0, B = 0, C = 0 , w = 1 ;
+
+float mx, my; //mouse coordination
+int count=0; //number of click
+
+
+typedef struct {
+	vec2_t position;
+}triangle_t;
+
+typedef struct {
+  float x, y ;
+} point_t ;
+
+typedef struct {
+	vec2_t center ;
+	float radius ;
+} circle_t ;
+
+vec2_t position_of_circles;
+
+circle_t start_point,end_point;
+vec2_t posi;
+float wAngle = 0 ;
+float bAngle = 0 ;
+float angle = 0 ;
+
+void circle( int x, int y, int r )
+{
+	float angle ;
+    glBegin( GL_POLYGON ) ;
+	for ( int i = 0 ; i < 360 ; i+=5 )
+	{
+		angle = i * D2R ;
+		glVertex2f( x+r*cos(angle), y+r*sin(angle)) ;
+	}
+	glEnd();
+}
+
+void circle_wire(int x, int y, int r)
+{
+	float angle;
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < 360; i += 5)
+	{
+		angle = i * D2R;
+		glVertex2f(x + r*cos(angle), y + r*sin(angle));
+	}
+	glEnd();
+}
+
+void print(int x, int y, char *string, void *font )
+{
+	int len, i ;
+
+	glRasterPos2f( x, y );
+	len = (int) strlen( string );
+	for ( i =0; i<len; i++ )
+	{
+		glutBitmapCharacter( font, string[i]);
+	}
+}
+
+void vprint(int x, int y, void *font, char *string , ...)
+{
+	va_list ap;
+	va_start ( ap, string );
+	char str[1024] ;
+	vsprintf_s( str, string, ap ) ;
+	va_end(ap) ;
+	
+	int len, i ;
+	glRasterPos2f( x, y );
+	len = (int) strlen( str );
+	for ( i =0; i<len; i++ )
+	{
+		glutBitmapCharacter( font, str[i]);
+	}
+}
+
+
+float f( float x ) {
+	float angle = w * x + C ;
+	return A * sin( angle * D2R ) + B ; 
+	
+}
+
+void grid(){
+	
+	glColor3f( 0.1, 0.1, 0.1) ;
+	for ( int i=0; i<25; i++ ) {
+		glBegin( GL_LINES ) ;
+		  glVertex2f( -400, 300 - i * 25) ;
+		  glVertex2f(  400, 300 - i * 25) ;
+		  glEnd();
+	}
+	for(int i=0;i<33;i++){
+		glBegin( GL_LINES ) ;
+
+		  glVertex2f( 400 - i * 25 , 300) ;
+		  glVertex2f(  400 - i * 25, -300) ;
+		glEnd() ;
+	}
+	
+}
+
+void Circles(){
+	if ( count > 0 ) {
+		glColor3f(0,1,0);
+		circle(start_point.center.x, start_point.center.y, 28);
+		glColor3f(1,1,1);
+		circle(start_point.center.x, start_point.center.y, 24);
+		glColor3f(0,1,0);
+		circle(start_point.center.x, start_point.center.y, 20);
+		glColor3f(0,0,0);
+		vprint(start_point.center.x-13, start_point.center.y, GLUT_BITMAP_8_BY_13, "START");
+		glEnd();
+	}
+	if(count > 1) {
+		glColor3f(1,1,1);
+		glBegin( GL_LINES ) ;
+		  glVertex2f(start_point.center.x, start_point.center.y) ;
+		  glVertex2f(end_point.center.x, end_point.center.y) ;
+		glEnd() ;
+		glLineWidth(1) ;
+		glColor3f(0,1,0);
+		circle(start_point.center.x, start_point.center.y, 28);
+		glColor3f(1,1,1);
+		circle(start_point.center.x, start_point.center.y, 24);
+		glColor3f(0,1,0);
+		circle(start_point.center.x, start_point.center.y, 20);
+		glColor3f(0,0,0);
+		vprint(start_point.center.x-13, start_point.center.y, GLUT_BITMAP_8_BY_13, "START");
+		
+		glColor3f(1,0,0);
+		circle( end_point.center.x, end_point.center.y, 28 ) ;
+		glColor3f(1,1,1);
+		circle( end_point.center.x, end_point.center.y, 24 ) ;
+		glColor3f(1,0,0);
+		circle( end_point.center.x, end_point.center.y, 20 ) ;
+		
+		glLineWidth(1) ;
+		glColor3f(0, 0, 0) ; 
+		vprint(end_point.center.x-5, end_point.center.y, GLUT_BITMAP_8_BY_13, "END");		
+	}
+
+}
+float round(float x)
+{
+	return (x >= 0) ? (int)(x + 0.5) : (int)(x - 0.5);
+}
+
+void point(){
+	
+	glColor3f( 1, 1, 1 ) ;
+	float a=(mx/25);
+	
+	float b=(my/25);
+	circle( round(a)*25, round(b)*25, 5 ) ;
+	
+}
+void triangle(){
+	
+	glColor3f(1,1,1);
+	glBegin( GL_TRIANGLES ) ;
+	Vertex2f( 0, 50 ) ;
+	Vertex2f( -40, 40 ) ;
+	Vertex2f( 40, -40 ) ;
+	glEnd();
+
+}
+
+
+void MovementofTriangle(){
+	float angle;
+	float y1=end_point.center.y-start_point.center.y;
+	float x1=end_point.center.x-start_point.center.x;
+	angle=atan2(y1,x1);
+
+	if(dTriangle)
+	{
+		LoadIdentity();
+		Translatef( position_of_circles.x, position_of_circles.y ) ;
+	 
+		Rotatef( angle * VALUE+60 ) ;
+		triangle();
+
+
+		 glColor3f(1,1,1);
+		 if(angle *VALUE+60 > 360)
+			 vprint(-350, -260, GLUT_BITMAP_HELVETICA_12, "Angle: %.1f",angle * VALUE-300);
+		 if(angle *VALUE+60 <= 360)
+			 vprint(-350, -260, GLUT_BITMAP_HELVETICA_12, "Angle: %.1f",angle * VALUE+60);
+		
+		 vprint(-350, -271, GLUT_BITMAP_HELVETICA_12, "Speed: %.1f ",spd);
+		 vprint(-350, -281, GLUT_BITMAP_HELVETICA_12, "Velocity: < , >  ");
+	
+	 
+	}
+
+}
+
+void movement(){
+	float angle ;
+	float y1=end_point.center.y-start_point.center.y;
+	float x1=end_point.center.x-start_point.center.x;
+	angle=atan2(y1,x1);
+	if(dTriangle) {
+		LoadIdentity();
+		Translatef(position_of_circles.x, position_of_circles.y);
+		Rotatef(angle * VALUE+60);
+		
+}
+}
+
+void display()
+{
+	
+
+	glClearColor( 0, 0 , 0 , 0 );
+	glClear( GL_COLOR_BUFFER_BIT );
+
+
+	glColor3f( 1, 0, 0) ;
+	glRectf( -375, 300, -275, 275 ) ;
+	glEnd();
+	
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(-375,300);
+	glVertex2f(-275,300);
+	glVertex2f(-275,275);
+	glVertex2f(-375,275);
+	glVertex2f(-375,300);
+	glEnd();
+
+	glColor3f( 1,1,0 ) ;
+	grid();
+	point();
+
+	float angle;
+	float y1=end_point.center.y-start_point.center.y;
+	float x1=end_point.center.x-start_point.center.x;
+	angle=atan2(y1,x1);
+	
+
+	triangle();
+	
+	MovementofTriangle();
+	movement();
+	Circles();
+
+	glColor3f( 1,1,0 ) ;
+	vprint(-375, 290, GLUT_BITMAP_8_BY_13, "ANIL DUYGULU");
+	vprint(-390,260,GLUT_BITMAP_8_BY_13,"%d %d",int(mx),int(my));
+	glEnd();
+
+
+	
+	glutSwapBuffers();
+
+}
+
+void onKeyDown(unsigned char key, int x, int y )
+{
+   // exit when ESC is pressed.
+   if ( key == 27 )
+	   exit(0);
+    
+    // to refresh the window it calls display() function
+   glutPostRedisplay() ;
+}
+
+void onKeyUp(unsigned char key, int x, int y )
+{
+   // exit when ESC is pressed.
+   if ( key == 27 )
+	   exit(0);
+    
+    // to refresh the window it calls display() function
+   glutPostRedisplay() ;
+}
+
+void onSpecialKeyDown( int key, int x, int y )
+{
+	// Write your codes here.
+	switch (key) {
+	case GLUT_KEY_UP: up = true; break;
+	case GLUT_KEY_DOWN: down = true; break;
+	case GLUT_KEY_LEFT: left = true; break;
+	case GLUT_KEY_RIGHT: right = true; break;
+
+	}
+	 // to refresh the window it calls display() function
+	glutPostRedisplay() ;
+}
+
+void onSpecialKeyUp( int key, int x, int y )
+{
+  	// Write your codes here.
+	switch (key) {
+	case GLUT_KEY_UP: up = false; break;
+	case GLUT_KEY_DOWN: down = false; break;
+	case GLUT_KEY_LEFT: left = false; break;
+	case GLUT_KEY_RIGHT: right = false; break;
+
+	}
+	 // to refresh the window it calls display() function
+	glutPostRedisplay() ;
+}
+void onClick( int button, int stat, int x, int y )
+{
+	vec2_t clk;
+	clk.x=x-400;
+	clk.y=300-y;
+
+	if(stat==GLUT_UP && button==GLUT_LEFT_BUTTON)
+	{
+		if(count==0){
+			start_point.center=clk;
+			position_of_circles=start_point.center;
+			dTriangle=false;
+
+		}
+		if(count==1)
+		{
+			end_point.center=clk;
+			position_of_circles=end_point.center;
+			dTriangle=true;
+		}
+		if(count>=2)
+		{
+			count = -1;
+			spd=1;//default speed
+			dTriangle=false;
+		}
+		count++;
+	}
+
+
+	glutPostRedisplay() ; 
+}
+
+void onResize( int w, int h )
+{
+
+	glViewport( 0,0,w,h) ;
+	glMatrixMode( GL_PROJECTION );
+	glLoadIdentity();
+	glOrtho( -w/2, w/2, -h/2, h/2, -1, 1);
+	glMatrixMode( GL_MODELVIEW);
+	glLoadIdentity();
+
+}
+
+void onMoveDown( int x, int y ) {
+	// Write your codes here.
+
+
+	
+	 // to refresh the window it calls display() function	
+	 //glutPostRedisplay() ;
+}
+
+void onMove( int x, int y ) {
+	mx = x - 400 ; // mouse x
+	my = 300 - y ; // mouse y
+}
+#if TIMER_ON == 1
+
+void onTimer( int v ) {
+	 
+	glutTimerFunc( TIMER_PERIOD, onTimer, 0 ) ;
+	
+	point_t ms;
+	ms.x=mx;//mouse -coordination of x
+	ms.y=my;//mouse -coordination of y
+	
+
+
+	if(up){
+		spd+=0.1;
+		if(spd>5)
+			spd=5;
+	}
+	if(down){
+		spd--;
+		if(spd<=0)
+			spd=0;
+	}
+	
+
+	
+
+	glutPostRedisplay() ;
+
+}
+#endif
+
+
+void main( int argc, char *argv[] )
+{
+
+	glutInit(&argc, argv );
+	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+	glutCreateWindow( "Homework 4" ) ;
+
+	glutDisplayFunc( display ) ;
+    glutReshapeFunc( onResize );
+	//
+	// keyboard registration
+	//
+	glutKeyboardFunc( onKeyDown ) ;
+	glutSpecialFunc( onSpecialKeyDown ) ;
+
+	glutKeyboardUpFunc( onKeyUp ) ;
+	glutSpecialUpFunc( onSpecialKeyUp ) ;
+
+	//
+	// mouse registration
+	//
+    glutMouseFunc( onClick) ;
+	glutMotionFunc( onMoveDown ) ;
+	glutPassiveMotionFunc( onMove ) ; 
+	
+    #if  TIMER_ON == 1
+	// timer event
+	glutTimerFunc( TIMER_PERIOD, onTimer, 0 ) ;
+	#endif
+
+	glutMainLoop();
+}
