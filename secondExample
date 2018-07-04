@@ -1,0 +1,401 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <stdarg.h>
+#include <GL/glut.h>
+#define WINDOW_WIDTH  600
+#define WINDOW_HEIGHT 800
+#define  TIMER_PERIOD  20 // Period for the timer.
+#define  TIMER_ON      1     // 0:disable timer, 1:enable timer
+#define D2R 0.0174532
+#define PI 3.1415
+int width, height ;
+bool up = false, down = false, right = false, left = false;
+
+typedef struct {
+        float x, y ;
+		int anl1,anl2;
+} point_t ;
+typedef struct {
+        unsigned char r,g,b ;
+} color_t ;
+typedef struct {
+        point_t pos ;
+        float angle ;
+} entity_t ;
+typedef struct {
+        point_t pos ;
+        float angle ;
+        bool active ;
+} fire_t ;
+typedef struct {
+        point_t pos ;
+        float radius ;
+        color_t color ;
+        bool active ;
+} target_t ;
+#define NUM_TARGET  5
+target_t t[NUM_TARGET ] ;
+fire_t f1 = { {0,0}, 0, false } ;
+entity_t p = { {0,0} , 120 } ;
+int num_target = NUM_TARGET ;
+int score = 0 ;
+int ad1,ad2;
+int hiz;
+float A = 100, B = 0, C = 0 , w = 1 ;
+float angle = 0 ;
+#define NUM_MOVE 5
+typedef struct {
+        float x, y ;
+} pos_t ;
+pos_t movingObjects[NUM_MOVE] ;
+
+
+void circle( int x, int y, int r )
+{
+        float angle ;
+    glBegin( GL_POLYGON ) ;
+        for ( int i = 0 ; i < 360 ; i+=5 )
+        {
+                angle = i * D2R ;
+                glVertex2f( x+r*cos(angle), y+r*sin(angle)) ;
+        }
+        glEnd();
+}
+
+void circle_wire(int x, int y, int r)
+{
+        float angle;
+        glBegin(GL_LINE_LOOP);
+        for (int i = 0; i < 360; i += 5)
+        {
+                angle = i * D2R;
+                glVertex2f(x + r*cos(angle), y + r*sin(angle));
+        }
+        glEnd();
+}
+void print(int x, int y, char *string, void *font )
+{
+        int len, i ;
+
+        glRasterPos2f( x, y );
+        len = (int) strlen( string );
+        for ( i =0; i<len; i++ )
+        {
+                glutBitmapCharacter( font, string[i]);
+        }
+}
+void vprint(int x, int y, void *font, char *string , ...)
+{
+        va_list ap;
+        va_start ( ap, string );
+        char str[1024] ;
+        vsprintf_s( str, string, ap ) ;
+        va_end(ap) ;
+
+        int len, i ;
+        glRasterPos2f( x, y );
+        len = (int) strlen( str );
+        for ( i =0; i<len; i++ )
+        {
+                glutBitmapCharacter( font, str[i]);
+        }
+}
+
+
+float f2( float x ) {
+        float angle = w * x + C ;
+        return A * sin( angle * D2R ) + B ;
+        //return 0.1 * x;
+}
+
+
+
+void drawUnitcircle() {
+        glColor3ub(100, 97, 97 ) ;
+        circle_wire( 0, 0, 300 ) ;
+        circle_wire( 0, 0, 250 ) ;
+        circle_wire( 0, 0, 170 ) ;
+
+		
+
+        glColor3f(1,0,0) ;
+		
+        circle( 0 + 300 * cos(angle * D2R ), 0 + 300 * sin(angle*D2R), 25 ) ;
+        circle( 0 + 250 * -cos(angle * D2R ), 0 + 250 * -sin(angle*D2R), 17 ) ;
+        circle( 0 + 170 * cos(angle * D2R ), 0 + 170 * sin(angle*D2R), 25 ) ;
+
+        glColor3f(0,0,0);
+        vprint(0 + 300 * cos(angle * D2R ), 0 + 300 * sin(angle*D2R),GLUT_BITMAP_HELVETICA_10, "%0.f",angle);
+        vprint(0 + 250 * -cos(angle * D2R ), 0 + 250 * -sin(angle*D2R),GLUT_BITMAP_HELVETICA_10, "%0.f",angle);
+        vprint(0 + 170 * cos(angle * D2R ), 0 + 170 * sin(angle*D2R),GLUT_BITMAP_HELVETICA_10, "%0.f",angle);
+		
+		glColor3f(1,1,0) ;
+		double angle1 = atan2f(ad2, ad1)*180/PI;
+		if(ad2<0){
+			if(ad1<0)
+			 vprint(ad1-20, ad2-10,GLUT_BITMAP_HELVETICA_10, "%.f ",(angle1+359));
+			else
+			 vprint(ad1+10, ad2-10,GLUT_BITMAP_HELVETICA_10, "%.f ",(angle1+359));
+
+			
+		}
+		else{
+			if(ad1<0)
+        vprint(ad1-10, ad2+10,GLUT_BITMAP_HELVETICA_10, "%.f ",angle1);
+			else
+        vprint(ad1+10, ad2+10,GLUT_BITMAP_HELVETICA_10, "%.f ",angle1);
+
+		}
+        
+		
+        
+
+}
+
+void drawMovingCircle( int i ) {
+        float x = movingObjects[i].x ;
+        float y = movingObjects[i].y;
+}
+
+
+void drawEntity() {
+
+        float dx = 50 * cos( p.angle * PI / 180 ) ;
+			
+        float dy = 50 * sin( p.angle * PI / 180 ) ;
+		
+
+        glLineWidth(3) ;
+		
+		
+		//silah
+        glColor3f( 0, 0.5, 0.9 ) ;
+        glBegin( GL_LINES ) ;
+
+		//nisangah
+          glVertex2f( p.pos.anl1, p.pos.anl2 ) ;
+		  
+			 glVertex2f( ad1 + dx+26,ad2 + dy-44 ) ;
+			 
+
+		
+        glEnd() ;
+        glLineWidth(1) ;
+
+        glColor3f( 1, 1, 1 ) ;
+        circle( p.pos.x, p.pos.y, 12 ) ;
+
+        glColor3f( 0.4, 0.4, 0.8 ) ;
+        circle( p.pos.x, p.pos.y, 9 ) ;
+		
+
+		
+
+}
+void drawFire() {
+        if ( f1.active ) {
+                glColor3f(1,1,0) ;
+                circle( f1.pos.x, f1.pos.y, 5 ) ;
+				 
+        }
+}
+
+void drawTargets() {
+        for ( int i=0 ; i<NUM_TARGET; i++ ) {
+                if ( t[i].active ) {
+                        glColor3ub( t[i].color.r, t[i].color.g, t[i].color.b ) ;
+                        circle( t[i].pos.x, t[i].pos.y, t[i].radius ) ;
+                }
+        }
+
+}
+void display()
+{
+
+        glClearColor( 0, 0 , 0 , 0 );
+        glClear( GL_COLOR_BUFFER_BIT );
+
+
+		glBegin(GL_LINE_LOOP);
+        glColor3ub(100, 97, 97);
+        glVertex2f(0,-600);
+        glVertex2f(0,600);
+        glEnd();
+        glBegin(GL_LINE_LOOP);
+        glColor3ub(100, 97, 97);
+        glVertex2f(-600,0);
+        glVertex2f(600,0);
+        glEnd();
+        glColor3f(1,1,1) ;
+		vprint(200,-288,GLUT_BITMAP_8_BY_13,"%d %d",ad1,ad2);
+        vprint( -250, 370, GLUT_BITMAP_HELVETICA_10, "ANIL DUYGULU" );
+		glColor3f(1,0,0) ;
+		vprint(-300+angle,f2(angle)+275,GLUT_BITMAP_TIMES_ROMAN_10,"CLICK TO START");
+
+                drawFire() ;   
+                drawEntity() ;
+				
+        //displayFunc() ;
+//        drawGraph() ;
+        drawUnitcircle() ;
+
+        glutSwapBuffers();
+
+
+}
+void onKeyDown(unsigned char key, int x, int y )
+{
+    // exit when ESC is pressed.
+   if ( key == 27 )
+           exit(0);
+    if ( key == ' ' && f1.active == false ) {
+                f1.active = true ;
+                f1.pos = p.pos ;
+                f1.angle = p.angle ;
+        }
+    // to refresh the window it calls display() function
+   glutPostRedisplay() ;
+}
+
+void onKeyUp(unsigned char key, int x, int y )
+{
+   // exit when ESC is pressed.
+   if ( key == 27 )
+           exit(0);
+   
+    // to refresh the window it calls display() function
+   glutPostRedisplay() ;
+}
+void onSpecialKeyDown( int key, int x, int y )
+{
+    
+        glutPostRedisplay() ;
+}
+void onSpecialKeyUp( int key, int x, int y )
+{
+
+    
+        glutPostRedisplay() ;
+}
+void onClick( int button, int stat, int x, int y )
+{
+
+        glutPostRedisplay() ;
+}
+void onResize( int ad1, int ad2 )
+{
+    // To setup coordinate system
+	width=ad1;
+	height=ad2;
+        glViewport( 0,0,ad1,ad2) ;
+        glMatrixMode( GL_PROJECTION );
+        glLoadIdentity();
+        glOrtho( -ad1/2, ad1/2, -ad2/2, ad2/2, -1, 1);
+        glMatrixMode( GL_MODELVIEW);
+        glLoadIdentity();
+
+}
+void onMoveDown( int x, int y ) {
+
+}
+void onMove( int x, int y ) {
+	ad1=x-300;
+	ad2=400-y;
+}
+void move( float speed) {
+	
+        float dx = speed * cos( p.angle * PI / 180 ) ;
+        float dy = speed * sin( p.angle * PI / 180 ) ;
+        p.pos.x +=dx ;
+        p.pos.y += dy ;
+
+        if ( p.pos.x < -200 || p.pos.x > 200 || p.pos.y < -200 || p.pos.y > 200 ) {
+                p.pos.x -= dx ;
+                p.pos.y -= dy ;
+        }
+
+}
+bool checkCollision( target_t t, fire_t f ) {
+        float d = sqrt( (t.pos.x - f.pos.x ) * (t.pos.x - f.pos.x ) +
+                             (t.pos.y - f.pos.y ) * (t.pos.y - f.pos.y ) );
+        return d <= ( t.radius + 4 ) ;
+}
+#if TIMER_ON == 1
+void onTimer( int v ) {
+
+        glutTimerFunc( TIMER_PERIOD, onTimer, 0 ) ;
+        // Write your codes here.
+		
+        angle += 2 ;
+        if ( angle >= 360 )  
+			angle = angle - 360 ;
+
+		
+
+        if ( f1.active ) {
+                float dx = 10 * cos( f1.angle * PI / 180 ) ;
+                float dy = 10 * sin( f1.angle * PI / 180 ) ;
+
+                f1.pos.x += dx ;
+                f1.pos.y += dy ;
+
+                if ( f1.pos.x < -300 || f1.pos.x > 300
+                        || f1.pos.y < -400 || f1.pos.y > 400 ) {
+                                f1.active =false ;
+                }
+
+                for ( int i=0 ; i<NUM_TARGET; i++ ) {
+                        if ( t[i].active && checkCollision(t[i], f1) ) {
+                                t[i].active = false ;
+                                f1.active = false ;
+                                num_target-- ;
+                                break ;
+                        }
+                }
+
+        }
+
+        // circular movement
+	
+        movingObjects[3].y = 60 * sin( angle * D2R  ) + 50 ;
+        movingObjects[3].x = 60 * cos( angle * D2R ) + 230  ;
+
+		
+
+
+        glutPostRedisplay() ;
+
+}
+#endif
+
+void main( int argc, char *argv[] )
+{
+
+        glutInit(&argc, argv );
+        glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE );
+        glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        glutCreateWindow( "Template File" ) ;
+
+        glutDisplayFunc( display ) ;
+	    glutReshapeFunc( onResize );
+		//keyboard
+        glutKeyboardFunc( onKeyDown ) ;
+        glutSpecialFunc( onSpecialKeyDown ) ;
+
+        glutKeyboardUpFunc( onKeyUp ) ;
+        glutSpecialUpFunc( onSpecialKeyUp ) ;
+		//mouse
+		glutMouseFunc( onClick) ;
+        glutMotionFunc( onMoveDown ) ;
+        glutPassiveMotionFunc( onMove ) ;
+
+		
+    #if  TIMER_ON == 1
+        // timer event
+        glutTimerFunc( TIMER_PERIOD, onTimer, 0 ) ;
+        #endif
+
+        glutMainLoop();
+}
